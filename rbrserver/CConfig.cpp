@@ -2,7 +2,7 @@
  * Solution   : Euro Truck Multiplayer RBR
  * Project    : Euro Truck Multiplayer RBR - Server
  * Licence    : GNU GPL v2
- * File       : CCommandSystem.cpp
+ * File       : CConfig.cpp
  * System Save xml:
  * Description: Project By RBR Team
  * Dev Sun : 
