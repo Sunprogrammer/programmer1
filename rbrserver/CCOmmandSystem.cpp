@@ -1,5 +1,4 @@
-/**********************************************************************
- *
+/
  * Solution   : Euro Truck Multiplayer RBR
  * Project    : Euro Truck Multiplayer RBR - Server
  * Licence    : GNU GPL v2
@@ -8,7 +7,7 @@
  * Dev Sun : 
  *Site :BlackBox.ac  <carlos_sk8ever_@hotmail.com>>
  *
- **********************************************************************/
+ */
  
  #include "StdInc.h"
 
