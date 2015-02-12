@@ -1,0 +1,14 @@
+#include "StdInc.h"
+
+extern CServer          *g_pServer;
+
+void CEventManager::Call ( CString strName, CSquirrelArguments *pArguments )
+{
+        for ( std::list<CEventHandler *>::iterator iter = m_EventHandler.begin(); iter != m_EventHandler.end(); iter ++ )
+        {
+                if ( (*iter)->m_strName == strName )
+                {
+                        g_pServer->GetResourceManager()->Call((*iter)->m_pVM, (*iter), pArguments);
+                }
+        }       
+}
