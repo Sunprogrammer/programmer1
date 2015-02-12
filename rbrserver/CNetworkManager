@@ -1,0 +1,88 @@
+#include "StdInc.h"
+
+CNetworkManager::CNetworkManager()
+{
+        // Inicialização Rak Net.
+        m_pRakPeer = RakNet::RakPeerInterface::GetInstance();
+
+        //Inicialização pluginu RPC4 , Scripts
+        m_pRPC4 = RakNet::RPC4::GetInstance();
+}
+
+CNetworkManager::~CNetworkManager()
+{
+        SAFE_DELETE(m_pQuery);
+}
+
+void CNetworkManager::Startup(unsigned int uiPort, int iMaxPlayers, CString strBindHost)
+{
+        //  socket 1.
+        RakNet::SocketDescriptor socketDescriptor(uiPort, strBindHost.Get());
+
+        // socket 2.
+        m_pRakPeer->Startup(iMaxPlayers, &socketDescriptor, 1); 
+        m_pRakPeer->SetMaximumIncomingConnections(iMaxPlayers);
+        // pluginu RPC4 do RakNet::RakPeer 1,2
+        m_pRakPeer->AttachPlugin(m_pRPC4);
+
+        // Inicialização  RPC
+        //m_pRPCManager = new CRPCManager(m_pRakPeer);
+
+        // Inicialização pack scripts managers
+        m_pPacketManager = new CPacketManager(m_pRPC4);
+
+        // Inicialização packet
+        m_pPacketManager->Install();
+
+        // Inicialização player Manager.
+        m_pPlayerManager = new CPlayerManager ();
+
+        SetStarted(true);
+
+        // Inicialização Query Interface.
+        m_pQuery = new CQuery(uiPort, strBindHost);
+}
+
+void CNetworkManager::Process()
+{
+        if(IsStarted())
+        {
+                m_pPlayerManager->Process();
+
+                if(m_pQuery)
+                        m_pQuery->Process();
+
+                RakNet::Packet * pPacket = NULL;
+
+                while(pPacket = m_pRakPeer->Receive())
+                {
+                        switch(pPacket->data[0])
+                        {
+                        case ID_NEW_INCOMING_CONNECTION:
+                                char szString[256];
+                                pPacket->systemAddress.ToString(true, szString, ':');
+                                CLog::Printf("New incoming call with ip address %s.", szString);
+                                break;
+                        case ID_DISCONNECTION_NOTIFICATION:
+                                m_pPlayerManager->Delete((int)pPacket->systemAddress.systemIndex);
+                                break;
+                        case ID_CONNECTION_LOST:
+                                m_pPlayerManager->Delete((int)pPacket->systemAddress.systemIndex);
+                                break;
+                        }
+                        m_pRakPeer->DeallocatePacket(pPacket);
+                }
+        }
+}
+
+
+bool CNetworkManager::Call( const char* uniqueID, RakNet::BitStream * bitStream, int iPlayerId, PacketPriority priority, PacketReliability reliability, char orderingChannel, bool broadcast )
+{
+        if(IsStarted())
+        {
+                m_pRPC4->Call(uniqueID, bitStream, priority, reliability, orderingChannel, 
+                        (iPlayerId == -1 ? RakNet::UNASSIGNED_SYSTEM_ADDRESS : GetPlayerAddress(iPlayerId)), broadcast);
+                return true;
+        }
+        return false;
+}
