@@ -1,0 +1,11 @@
+#pragma once
+
+class CEventNatives
+{
+public:
+        static void Register ( CResourceScript *pResourceScript );
+
+        static SQInteger AddEventHandler ( SQVM *pVM );
+        static SQInteger AddEvent ( SQVM * pVM );
+        static SQInteger TriggerEvent ( SQVM * pVM );
+};
