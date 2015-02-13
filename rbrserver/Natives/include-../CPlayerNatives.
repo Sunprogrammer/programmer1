@@ -1,0 +1,20 @@
+#pragma once
+
+//Fix for windows for bugs defaults .
+#ifdef SendMessage
+        #undef SendMessage
+#endif
+
+class CPlayerNatives
+{
+public:
+        static void Register ( CResourceScript *pResourceScript );
+
+        static SQInteger GetName ( SQVM *pVM ); //getPlayerName(playerid)
+        static SQInteger SendMessage (SQVM *pVM); //sendPlayerMessage(playerid, color, message)
+        static SQInteger SendMessageToAll (SQVM *pVM); //sendMessageToAll(color, message)
+        static SQInteger IsConnected (SQVM *pVM); //isPlayerConnected(playerid)
+        static SQInteger GetPing(SQVM *pVM); //getPlayerPing(playerid)
+        static SQInteger SetChatBoxPos(SQVM *pVM); //setChatBoxPosition(playerid, x, y)
+        static SQInteger GetChatBoxPos(SQVM *pVM); //getChatBoxPosition(playerid)
+};
