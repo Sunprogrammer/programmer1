@@ -1,1 +1,512 @@
-#@
+/**************************************************************
+ *
+ * Solution    : Euro Truck Simulator 2 Multiplayer RBR
+ * Project     : Client Core.DLL
+ * Licence     : See LICENSE in the top level directory
+ * File		   : Main.cpp
+ * Developers  :BB <carlos_sk8ever_@hotmail.com>>
+ *
+ ***************************************************************/
+#include <Includes.h>
+
+#pragma comment(linker,"\"/manifestdependency:type='win32' \
+name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
+processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#include "Main.h"
+
+#define				WINDOW_NAME "Euro Truck Multiplayer RBR- Development Sun ("__DATE__", "__TIME__")"
+#define				ID_LISTVIEW    1
+
+LRESULT CALLBACK	WindowProcess(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK	WindowProcess2(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+HWND				g_hwMainWindow = NULL;
+HWND				g_hwQuickConnectWindow = NULL;
+HWND				g_hwListView[2];
+MSG					g_pMsg;
+int					g_iNextFreeSlot = 0;
+
+HWND				g_hwButtons[7];
+HWND				g_hwEdit[10];
+HWND				g_hwLabel[10];
+
+char cAlphabet[24] = {
+	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
+	'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'u', 'w', 'x',
+	'y', 'z'
+};
+
+struct sSelected
+{
+	char szHostName[256];
+	int iPlayers;
+	int iMaxPlayers;
+	char szMapName [256];
+};
+
+int getSelected ( sSelected &selectedData )
+{
+	int iSelected = ListView_GetSelectionMark ( g_hwListView[0] );
+	if ( iSelected  != -1 )
+	{
+		char szElement[256];
+		ListView_GetItemText ( g_hwListView[0], iSelected, 0, szElement, 256 );
+		sprintf(selectedData.szHostName, szElement );
+
+		int iElement = NULL;
+		ListView_GetItemText ( g_hwListView[0], iSelected, 1, szElement, 256 );
+		sscanf(szElement, "%d/%d", &selectedData.iPlayers, &selectedData.iMaxPlayers );
+
+		ListView_GetItemText ( g_hwListView[0], iSelected, 2, szElement, 256 );
+		sprintf(selectedData.szMapName, szElement );
+		return 1;
+	}
+	return NULL;
+}
+
+void addServer ( char *szHostName, int iPlayers, char *szMapName )
+{
+	LVITEM lvi;
+	lvi.mask = LVIF_TEXT;
+
+	lvi.pszText = szHostName;
+	lvi.iItem = g_iNextFreeSlot;
+	lvi.iSubItem = 0;
+	ListView_InsertItem( g_hwListView[0], & lvi );
+
+	char szPlayers[40];
+	sprintf(szPlayers, "%d/10", iPlayers );
+	ListView_SetItemText ( g_hwListView[0], g_iNextFreeSlot, 1, szPlayers );
+	ListView_SetItemText ( g_hwListView[0], g_iNextFreeSlot, 2, szMapName );
+
+	g_iNextFreeSlot++;
+}
+
+void StartGame(char *szCommandLine, ...);
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+	InitCommonControls();
+
+
+	WNDCLASSEX wc_Class;
+
+
+	ZeroMemory ( &wc_Class, sizeof ( WNDCLASSEX ) );
+
+
+    wc_Class.cbSize = sizeof(WNDCLASSEX);
+    wc_Class.style = CS_HREDRAW | CS_VREDRAW;
+    wc_Class.lpfnWndProc = (WNDPROC)WindowProcess;
+    wc_Class.hInstance = hInstance;
+    wc_Class.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc_Class.hbrBackground = (HBRUSH)COLOR_WINDOW;
+    wc_Class.lpszClassName = "WindowClass1";
+
+CClient * g_pClient = NULL;
+
+BOOL WINAPI DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpvReserved)
+{
+	switch(dwReason)
+	{
+	case DLL_PROCESS_ATTACH:
+		{
+			// Disable thread library calls
+			DisableThreadLibraryCalls(hModule);
+
+			// Initialize Logger
+			char szLogPath[MAX_PATH];
+			time_t t = time(NULL);
+			struct tm * p_time = localtime(&t);
+
+			CreateDirectory(SharedUtils::GetAbsolutePath("Logs\\"),NULL);
+
+			sprintf(szLogPath,"%sclient_%02d_%02d_%04d.log",SharedUtils::GetAbsolutePath("Logs\\"),p_time->tm_mday,(p_time->tm_mon+1),(1900+p_time->tm_year));
+			CLogger::Init(szLogPath);
+
+#ifdef DEBUG
+			// Initialize debug stuffs
+			AllocConsole();
+			freopen("CONOUT$", "w", stdout);
+			freopen("CONIN$", "r", stdin);
+
+			CLogger::Debugf("Console started!");
+#endif
+
+			// Create an client instance
+			g_pClient = new CClient();
+
+			if(!g_pClient)
+			{
+				MessageBox(NULL, "Critical error with initializing client core instance, try again. If still this message occurs please try reinstal mod.", "Critical Error", MB_ICONERROR | MB_TOPMOST);
+				ExitProcess(0);
+				return TRUE;
+			}
+		} break;
+		
+		
+		const unsigned int CString::nPos = (unsigned int)-1;
+
+CString::CString(const char *szFormat, ...)
+{
+	Init();
+
+	if ( szFormat )
+	{
+		char szBuffer[BUFFER_SIZE];
+		va_list vList;
+		va_start ( vList, szFormat );
+		vsnprintf ( szBuffer, sizeof(szBuffer), szFormat, vList );
+		va_end ( vList );
+	
+		Set ( szBuffer );
+	}
+}
+
+CString::CString(const char *szFormat, ...)
+{
+	Init();
+
+	if ( szFormat )
+	{
+		char szBuffer[BUFFER_SIZE];
+		va_list vList;
+		va_start ( vList, szFormat );
+		vsnprintf ( szBuffer, sizeof(szBuffer), szFormat, vList );
+		va_end ( vList );
+	
+		Set ( szBuffer );
+	}
+}
+
+CString::CString() 
+{ 
+	Init();
+}
+
+void CString::Init ( )
+{
+	m_sLimit = nPos;
+}
+
+void CString::Set ( const char * szFormat )
+{
+	if(szFormat)
+	{
+		m_szValue.assign ( szFormat );
+
+		//
+		LimitTruncate();
+	}
+}
+
+void CString::Set ( const CString szString )
+{
+	m_szValue.assign ( szString.Get() );
+
+	// 
+	LimitTruncate();
+}
+
+void CString::Format ( const char *szFormat, ... )
+{
+	char *szBuffer = new char [ 2048 ];
+
+	va_list vaArgs;
+	va_start(vaArgs, szFormat);
+	vsprintf(szBuffer, szFormat, vaArgs);
+	va_end(vaArgs);
+
+	Set ( szBuffer );
+}
+
+std::string CString::GetPointer ( )
+{
+	return m_szValue;
+}
+
+bool CString::IsEmpty ( ) 
+{
+	return m_szValue.empty();
+}
+
+bool CString::IsNotEmpty ( )
+{
+	return !m_szValue.empty();
+}
+
+const char * CString::Get ( ) const
+{ 
+	return m_szValue.c_str(); 
+}
+
+int CString::Check (const char * szString) const
+{
+	return strcmp(m_szValue.c_str(), szString);
+}
+
+int CString::Check (const CString szString) const
+{
+	return strcmp(m_szValue.c_str(), szString.Get());
+}
+
+CString::operator const char * () const
+{
+	return m_szValue.c_str();
+}
+
+CString& CString::operator = (const char * szString)
+{
+	Set(szString);
+	return *this;
+}
+
+CString& CString::operator = (const CString strString)
+{
+	Set(strString.Get());
+	return *this;
+}
+
+CString& CString::operator = (const unsigned char ucChar)
+{
+	char szString[2];
+	szString[0] = ucChar;
+	szString[1] = '\0';
+	Set(szString);
+	return *this;
+}
+
+CString& CString::operator += (const char * szString)
+{
+	Append(szString);
+	return *this;
+}
+
+CString& CString::operator += (const CString strString)
+{
+	Append(strString.Get());
+	return *this;
+}
+
+CString& CString::operator += (const unsigned char ucChar)
+{
+	Append(ucChar);
+	return *this;
+}
+
+CString CString::operator + (const char * szString) const
+{
+	CString strNewString(*this);
+	strNewString.Append(szString);
+	return strNewString;
+}
+
+CString CString::operator + (const CString strString) const
+{
+	CString strNewString(*this);
+	strNewString.Append(strString.Get());
+	return strNewString;
+}
+
+CString CString::operator + (const unsigned char ucChar) const
+{
+	CString strNewString(*this);
+	strNewString.Append(ucChar);
+	return strNewString;
+}
+
+unsigned char CString::operator [] (size_t sOffset) const
+{
+	return GetChar(sOffset);
+}
+
+bool CString::operator == (const char * szString) const
+{
+	return (Check(szString) == 0);
+}
+
+bool CString::operator == (const CString strString) const
+{
+	return (Check(strString.Get()) == 0);
+}
+
+bool CString::operator != (const char * szString) const
+{
+	return (Check(szString) != 0);
+}
+
+bool CString::operator != (const CString strString) const
+{
+	return (Check(strString.Get()) != 0);
+}
+
+bool CString::operator > (const char * szString) const
+{
+	return (Check(szString) > 0);
+}
+
+bool CString::operator > (const CString strString) const
+{
+	return (Check(strString.Get()) > 0);
+}
+
+bool CString::operator >= (const char * szString) const
+{
+	return (Check(szString) >= 0);
+}
+
+bool CString::operator >= (const CString strString) const
+{
+	return (Check(strString.Get()) >= 0);
+}
+
+bool CString::operator < (const char * szString) const
+{
+	return (Check(szString) < 0);
+}
+
+bool CString::operator < (const CString strString) const
+{
+	return (Check(strString.Get()) < 0);
+}
+
+bool CString::operator <= (const char * szString) const
+{
+	return (Check(szString) <= 0);
+}
+
+bool CString::operator <= (const CString strString) const
+{
+	return (Check(strString.Get()) <= 0);
+}
+
+unsigned char CString::GetChar(size_t sOffset) const
+{
+	if(sOffset < GetLength())
+	{
+		return m_szValue[sOffset];
+	}
+	return 0;
+}
+
+bool CString::LimitTruncate()
+{
+	if(m_sLimit > nPos && GetLength() > m_sLimit)
+	{
+		m_szValue[m_sLimit] = '\0';
+		return true;
+	}
+	return false;
+}
+
+size_t CString::GetLength() const
+{
+	return m_szValue.size();
+}
+
+size_t CString::Find(const char * szString, size_t sPos) const
+{
+	return m_szValue.find(szString, sPos);
+}
+
+size_t CString::Find(const unsigned char ucChar, size_t sPos) const
+{
+	return m_szValue.find(ucChar, sPos);
+}
+
+size_t CString::Find(const CString strString, size_t sPos) const
+{
+	return m_szValue.find(strString.Get(), sPos);
+}
+
+CString	CString::CutStr(size_t sStart, size_t sStop) const
+{
+	return CString(m_szValue.substr(sStart, sStop).c_str());
+}	
+
+void CString::Append(const char * szString)
+{
+	if(szString)
+	{
+		m_szValue.append(szString);
+		LimitTruncate();
+	}
+}
+
+void CString::Append(const char * szString, unsigned int uiLength)
+{
+	if(szString)
+	{
+		unsigned int uiStringLength = strlen(szString);
+
+		if(uiLength > uiStringLength)
+			uiLength = uiStringLength;
+
+		m_szValue.append(szString, uiLength);
+
+		LimitTruncate();
+	}
+}
+
+void CString::Append(const CString strString)
+{
+	m_szValue.append(strString.Get());
+	LimitTruncate();
+}
+
+void CString::Append(const CString strString, unsigned int uiLength)
+{
+	if(uiLength > strString.GetLength())
+		uiLength = strString.GetLength();
+
+	m_szValue.append(strString.Get(), uiLength);
+
+	LimitTruncate();
+}
+
+void CString::AppendF(const char * szFormat, ...)
+{
+	if(szFormat)
+	{
+		char szString[BUFFER_SIZE];
+		va_list vaArgs;
+		va_start(vaArgs, szFormat);
+		vsprintf_s(szString, sizeof(szString), szFormat, vaArgs);
+		va_end(vaArgs);
+
+		m_szValue.append(szString);
+
+		LimitTruncate();
+	}
+}
+
+void CString::Append(const unsigned char ucChar)
+{
+	char szString[2];
+	szString[0] = ucChar;
+	szString[1] = '\0';
+
+	m_szValue.append(szString);
+
+	LimitTruncate();
+}
+CString& CString::ToLower()
+{
+	for(size_t i = 0; i < GetLength(); i++)
+		m_szValue[i] = tolower(m_szValue[i]);
+
+	return *this;
+}
+
+
+
+	case DLL_PROCESS_DETACH:
+		{
+			if(g_pClient)
+			{
+				delete g_pClient;
+				g_pClient = NULL;
+			}
+		} break;
+	}
+	return TRUE;
+}
+
